@@ -1,6 +1,6 @@
 # IPv4 Class Challenge
 
-A fast browser game to practice IPv4 address class identification.
+A fast browser game to practice IPv4 classes and their default subnet masks.
 
 ## Play locally
 
@@ -16,15 +16,15 @@ Then visit <http://localhost:8000>.
 ## Rules
 
 - You get 15 rounds per game.
-- For each IPv4 address, choose Class A, B, C, D, or E based on the first octet.
+- Questions are randomly interspersed between:
+  - identifying Class A, B, or C from an IPv4 address, and
+  - selecting the default subnet mask for the shown address.
 - Your best score is saved in local browser storage.
 
 ## IPv4 class ranges used
 
-- Class A: 1–126
-- Class B: 128–191
-- Class C: 192–223
-- Class D: 224–239
-- Class E: 240–255
+- Class A: 1–126 → 255.0.0.0
+- Class B: 128–191 → 255.255.0.0
+- Class C: 192–223 → 255.255.255.0
 
 > Note: 127.x.x.x (loopback range) is excluded from game prompts.

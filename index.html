@@ -77,6 +77,12 @@
       margin: 1.3rem 0 1rem;
     }
 
+    .question-type {
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
     .ip {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: clamp(1.8rem, 5vw, 3rem);
@@ -88,7 +94,7 @@
 
     .choices {
       display: grid;
-      grid-template-columns: repeat(5, minmax(60px, 1fr));
+      grid-template-columns: repeat(3, minmax(60px, 1fr));
       gap: 0.7rem;
       margin: 1rem 0;
     }
@@ -166,17 +172,12 @@
     <h1>IPv4 Class Challenge</h1>
 
     <section class="prompt">
-      <div>Identify the IPv4 class for this address:</div>
+      <div class="question-type" id="questionType">Class Question</div>
+      <div id="questionPrompt">Identify the IPv4 class for this address:</div>
       <div class="ip" id="ipAddress">0.0.0.0</div>
     </section>
 
-    <section class="choices" aria-label="Class choices">
-      <button data-choice="A">Class A</button>
-      <button data-choice="B">Class B</button>
-      <button data-choice="C">Class C</button>
-      <button data-choice="D">Class D</button>
-      <button data-choice="E">Class E</button>
-    </section>
+    <section class="choices" aria-label="Question choices" id="choices"></section>
 
     <div class="feedback" id="feedback"></div>
 
@@ -185,25 +186,32 @@
     </div>
 
     <section class="legend">
-      <div>A: 1-126</div>
-      <div>B: 128-191</div>
-      <div>C: 192-223</div>
-      <div>D: 224-239 (Multicast)</div>
-      <div>E: 240-255 (Experimental)</div>
+      <div>Class A: 1-126 → 255.0.0.0</div>
+      <div>Class B: 128-191 → 255.255.0.0</div>
+      <div>Class C: 192-223 → 255.255.255.0</div>
+      <div>127.x.x.x (loopback) is excluded from prompts.</div>
     </section>
   </main>
 
   <script>
     const TOTAL_ROUNDS = 15;
+    const CLASS_CHOICES = ['A', 'B', 'C'];
+    const MASK_BY_CLASS = {
+      A: '255.0.0.0',
+      B: '255.255.0.0',
+      C: '255.255.255.0',
+    };
 
     const scoreEl = document.getElementById('score');
     const roundEl = document.getElementById('round');
     const streakEl = document.getElementById('streak');
     const bestEl = document.getElementById('best');
+    const questionTypeEl = document.getElementById('questionType');
+    const questionPromptEl = document.getElementById('questionPrompt');
     const ipEl = document.getElementById('ipAddress');
     const feedbackEl = document.getElementById('feedback');
     const restartBtn = document.getElementById('restartBtn');
-    const choiceButtons = [...document.querySelectorAll('[data-choice]')];
+    const choicesEl = document.getElementById('choices');
 
     let score = 0;
     let round = 1;
@@ -211,6 +219,8 @@
     let best = Number(localStorage.getItem('ipv4-class-best') || 0);
     let currentIp = '';
     let currentClass = '';
+    let currentAnswer = '';
+    let currentQuestionType = 'class';
     let locked = false;
 
     bestEl.textContent = String(best);
@@ -218,9 +228,7 @@
     function classifyByFirstOctet(firstOctet) {
       if (firstOctet >= 1 && firstOctet <= 126) return 'A';
       if (firstOctet >= 128 && firstOctet <= 191) return 'B';
-      if (firstOctet >= 192 && firstOctet <= 223) return 'C';
-      if (firstOctet >= 224 && firstOctet <= 239) return 'D';
-      return 'E';
+      return 'C';
     }
 
     function randomInt(min, max) {
@@ -228,8 +236,13 @@
     }
 
     function generateIp() {
-      let first = randomInt(1, 255);
-      while (first === 127) first = randomInt(1, 255);
+      const firstOctetRanges = [
+        [1, 126],
+        [128, 191],
+        [192, 223],
+      ];
+      const [min, max] = firstOctetRanges[randomInt(0, firstOctetRanges.length - 1)];
+      const first = randomInt(min, max);
       const second = randomInt(0, 255);
       const third = randomInt(0, 255);
       const fourth = randomInt(0, 255);
@@ -248,19 +261,51 @@
       feedbackEl.className = `feedback ${kind}`.trim();
     }
 
+    function getChoicesForQuestionType(questionType) {
+      if (questionType === 'class') {
+        return CLASS_CHOICES.map((cls) => ({ value: cls, label: `Class ${cls}` }));
+      }
+      return Object.values(MASK_BY_CLASS).map((mask) => ({ value: mask, label: mask }));
+    }
+
+    function renderChoices(questionType) {
+      const choices = getChoicesForQuestionType(questionType);
+      choicesEl.innerHTML = '';
+
+      choices.forEach((choice) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.choice = choice.value;
+        button.textContent = choice.label;
+        button.addEventListener('click', () => handleChoice(choice.value));
+        choicesEl.appendChild(button);
+      });
+    }
+
     function nextQuestion() {
       if (round > TOTAL_ROUNDS) {
         ipEl.textContent = 'Game Over';
+        questionTypeEl.textContent = 'Session Complete';
+        questionPromptEl.textContent = 'You finished all rounds.';
         setFeedback(`Final score: ${score}/${TOTAL_ROUNDS}. Hit Restart to play again.`);
-        choiceButtons.forEach((btn) => (btn.disabled = true));
+        [...choicesEl.querySelectorAll('button')].forEach((btn) => (btn.disabled = true));
         return;
       }
+
       currentIp = generateIp();
       currentClass = classifyByFirstOctet(Number(currentIp.split('.')[0]));
+      currentQuestionType = Math.random() < 0.5 ? 'class' : 'mask';
+      currentAnswer = currentQuestionType === 'class' ? currentClass : MASK_BY_CLASS[currentClass];
+
+      questionTypeEl.textContent = currentQuestionType === 'class' ? 'Class Question' : 'Subnet Mask Question';
+      questionPromptEl.textContent = currentQuestionType === 'class'
+        ? 'Identify the IPv4 class for this address:'
+        : 'Choose the default subnet mask for this address:';
       ipEl.textContent = currentIp;
+
+      renderChoices(currentQuestionType);
       setFeedback('');
       locked = false;
-      choiceButtons.forEach((btn) => (btn.disabled = false));
       updateUi();
     }
 
@@ -270,33 +315,38 @@
 
       const firstOctet = Number(currentIp.split('.')[0]);
 
-      if (choice === currentClass) {
+      if (choice === currentAnswer) {
         score += 1;
         streak += 1;
         best = Math.max(best, score);
         localStorage.setItem('ipv4-class-best', String(best));
-        setFeedback(`✅ Correct. ${firstOctet}.x.x.x is Class ${currentClass}.`, 'good');
+
+        if (currentQuestionType === 'class') {
+          setFeedback(`✅ Correct. ${firstOctet}.x.x.x is Class ${currentClass}.`, 'good');
+        } else {
+          setFeedback(`✅ Correct. Class ${currentClass} uses ${currentAnswer}.`, 'good');
+        }
       } else {
         streak = 0;
-        setFeedback(`❌ Not quite. ${firstOctet}.x.x.x is Class ${currentClass}.`, 'bad');
+
+        if (currentQuestionType === 'class') {
+          setFeedback(`❌ Not quite. ${firstOctet}.x.x.x is Class ${currentClass}.`, 'bad');
+        } else {
+          setFeedback(`❌ Not quite. Class ${currentClass} uses ${currentAnswer}.`, 'bad');
+        }
       }
 
       round += 1;
       updateUi();
-      choiceButtons.forEach((btn) => (btn.disabled = true));
+      [...choicesEl.querySelectorAll('button')].forEach((btn) => (btn.disabled = true));
       setTimeout(nextQuestion, 900);
     }
-
-    choiceButtons.forEach((btn) => {
-      btn.addEventListener('click', () => handleChoice(btn.dataset.choice));
-    });
 
     restartBtn.addEventListener('click', () => {
       score = 0;
       round = 1;
       streak = 0;
       locked = false;
-      choiceButtons.forEach((btn) => (btn.disabled = false));
       setFeedback('New game started. Good luck!');
       nextQuestion();
     });

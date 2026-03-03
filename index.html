@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPv4 Class Challenge</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --card: #121a2b;
+      --accent: #56c2ff;
+      --good: #4ade80;
+      --bad: #fb7185;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #13213e 0%, var(--bg) 45%, #060b16 100%);
+      color: var(--text);
+      padding: 1rem;
+    }
+
+    .app {
+      width: min(820px, 100%);
+      background: linear-gradient(160deg, #15203a, var(--card));
+      border: 1px solid #26334f;
+      border-radius: 18px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+      padding: 1.25rem;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0.65rem 0.8rem;
+      min-width: 120px;
+    }
+
+    .stat .label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0.25rem 0 0.5rem;
+      font-size: clamp(1.3rem, 2.2vw, 2rem);
+    }
+
+    .prompt {
+      text-align: center;
+      margin: 1.3rem 0 1rem;
+    }
+
+    .ip {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      margin: 0.4rem 0;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(60px, 1fr));
+      gap: 0.7rem;
+      margin: 1rem 0;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid #304267;
+      background: #1c2a45;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: #24365a;
+      border-color: #4f7abf;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .feedback {
+      min-height: 1.4rem;
+      text-align: center;
+      font-weight: 600;
+      margin-top: 0.6rem;
+    }
+
+    .feedback.good { color: var(--good); }
+    .feedback.bad { color: var(--bad); }
+
+    .legend {
+      margin-top: 1rem;
+      display: grid;
+      gap: 0.4rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      border-top: 1px dashed rgba(255, 255, 255, 0.2);
+      padding-top: 0.8rem;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .restart {
+      background: #0f7adb;
+      border-color: #4ea8ff;
+    }
+
+    .restart:hover:not(:disabled) {
+      background: #1688f5;
+      border-color: #7ec2ff;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar">
+      <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
+      <div class="stat"><span class="label">Round</span><span class="value" id="round">1 / 15</span></div>
+      <div class="stat"><span class="label">Streak</span><span class="value" id="streak">0</span></div>
+      <div class="stat"><span class="label">Best</span><span class="value" id="best">0</span></div>
+    </div>
+
+    <h1>IPv4 Class Challenge</h1>
+
+    <section class="prompt">
+      <div>Identify the IPv4 class for this address:</div>
+      <div class="ip" id="ipAddress">0.0.0.0</div>
+    </section>
+
+    <section class="choices" aria-label="Class choices">
+      <button data-choice="A">Class A</button>
+      <button data-choice="B">Class B</button>
+      <button data-choice="C">Class C</button>
+      <button data-choice="D">Class D</button>
+      <button data-choice="E">Class E</button>
+    </section>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="actions">
+      <button class="restart" id="restartBtn">Restart</button>
+    </div>
+
+    <section class="legend">
+      <div>A: 1-126</div>
+      <div>B: 128-191</div>
+      <div>C: 192-223</div>
+      <div>D: 224-239 (Multicast)</div>
+      <div>E: 240-255 (Experimental)</div>
+    </section>
+  </main>
+
+  <script>
+    const TOTAL_ROUNDS = 15;
+
+    const scoreEl = document.getElementById('score');
+    const roundEl = document.getElementById('round');
+    const streakEl = document.getElementById('streak');
+    const bestEl = document.getElementById('best');
+    const ipEl = document.getElementById('ipAddress');
+    const feedbackEl = document.getElementById('feedback');
+    const restartBtn = document.getElementById('restartBtn');
+    const choiceButtons = [...document.querySelectorAll('[data-choice]')];
+
+    let score = 0;
+    let round = 1;
+    let streak = 0;
+    let best = Number(localStorage.getItem('ipv4-class-best') || 0);
+    let currentIp = '';
+    let currentClass = '';
+    let locked = false;
+
+    bestEl.textContent = String(best);
+
+    function classifyByFirstOctet(firstOctet) {
+      if (firstOctet >= 1 && firstOctet <= 126) return 'A';
+      if (firstOctet >= 128 && firstOctet <= 191) return 'B';
+      if (firstOctet >= 192 && firstOctet <= 223) return 'C';
+      if (firstOctet >= 224 && firstOctet <= 239) return 'D';
+      return 'E';
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateIp() {
+      let first = randomInt(1, 255);
+      while (first === 127) first = randomInt(1, 255);
+      const second = randomInt(0, 255);
+      const third = randomInt(0, 255);
+      const fourth = randomInt(0, 255);
+      return `${first}.${second}.${third}.${fourth}`;
+    }
+
+    function updateUi() {
+      scoreEl.textContent = String(score);
+      roundEl.textContent = `${Math.min(round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
+      streakEl.textContent = String(streak);
+      bestEl.textContent = String(best);
+    }
+
+    function setFeedback(message = '', kind = '') {
+      feedbackEl.textContent = message;
+      feedbackEl.className = `feedback ${kind}`.trim();
+    }
+
+    function nextQuestion() {
+      if (round > TOTAL_ROUNDS) {
+        ipEl.textContent = 'Game Over';
+        setFeedback(`Final score: ${score}/${TOTAL_ROUNDS}. Hit Restart to play again.`);
+        choiceButtons.forEach((btn) => (btn.disabled = true));
+        return;
+      }
+      currentIp = generateIp();
+      currentClass = classifyByFirstOctet(Number(currentIp.split('.')[0]));
+      ipEl.textContent = currentIp;
+      setFeedback('');
+      locked = false;
+      choiceButtons.forEach((btn) => (btn.disabled = false));
+      updateUi();
+    }
+
+    function handleChoice(choice) {
+      if (locked || round > TOTAL_ROUNDS) return;
+      locked = true;
+
+      const firstOctet = Number(currentIp.split('.')[0]);
+
+      if (choice === currentClass) {
+        score += 1;
+        streak += 1;
+        best = Math.max(best, score);
+        localStorage.setItem('ipv4-class-best', String(best));
+        setFeedback(`✅ Correct. ${firstOctet}.x.x.x is Class ${currentClass}.`, 'good');
+      } else {
+        streak = 0;
+        setFeedback(`❌ Not quite. ${firstOctet}.x.x.x is Class ${currentClass}.`, 'bad');
+      }
+
+      round += 1;
+      updateUi();
+      choiceButtons.forEach((btn) => (btn.disabled = true));
+      setTimeout(nextQuestion, 900);
+    }
+
+    choiceButtons.forEach((btn) => {
+      btn.addEventListener('click', () => handleChoice(btn.dataset.choice));
+    });
+
+    restartBtn.addEventListener('click', () => {
+      score = 0;
+      round = 1;
+      streak = 0;
+      locked = false;
+      choiceButtons.forEach((btn) => (btn.disabled = false));
+      setFeedback('New game started. Good luck!');
+      nextQuestion();
+    });
+
+    nextQuestion();
+  </script>
+</body>
+</html>
